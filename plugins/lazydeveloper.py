@@ -79,7 +79,8 @@ async def connect_session(bot, msg):
     lazydeveloper_string_session = session_msg.text
 
     await db.set_session(user_id, lazydeveloper_string_session)
-
+    await db.set_api(user_id, api_id)
+    await db.set_hash(user_id, api_hash)
     #get user api id 
     api_id_msg = await bot.ask(
         user_id, "ᴘʟᴇᴀsᴇ sᴇɴᴅ ʏᴏᴜʀ `API_ID`", filters=filters.text
@@ -110,9 +111,12 @@ async def connect_session(bot, msg):
         text="Trying to login...\n\nPlease wait 🍟"
     )
     await asyncio.sleep(1)
+    session = None
     try:
         sessionstring = await db.get_session(user_id)
-        lazydeveloperrsession[user_id] = TelegramClient(StringSession(sessionstring), api_id, api_hash)
+        apiid = await db.get_api(user_id)
+        apihash = await db.get_hash(user_id)
+        lazydeveloperrsession[user_id] = TelegramClient(StringSession(sessionstring), apiid, apihash)
         session = await lazydeveloperrsession[user_id].start()
         # for any query msg me on telegram - @LazyDeveloperr 👍
         if session:
@@ -129,14 +133,20 @@ async def connect_session(bot, msg):
     finally:
         await success.delete()
         # Ensure the session is stopped and cleaned up
-        if session:
-            await session.stop()
-            # await session.disconnect()
+        if session is not None :
+            # await session.stop()
+            await session.disconnect()
             del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
             print(f"Session stopped and cleaned up for user {user_id} ✅")
         return
 
 
+@Client.on_message(filters.private & filters.command("get_session"))
+async def getsession(client , message):
+    user_id = message.from_user.id
+    session = await db.get_session(user_id)
+    await client.send_message(chat_id=user_id, text=f"Here is your session string...\n<spoiler><code>{session}</code></spoiler>\n⚠ Please dont share this string to anyone, You may loOSE your account.", parse_mode=enums.ParseMode.HTML)
+    
 @Client.on_message(filters.private & filters.command("generate"))
 async def generate_session(bot, msg):
     lazyid = msg.from_user.id
@@ -273,6 +283,7 @@ async def generate_session(bot, msg):
     )
     # Save session to the dictionary
     await asyncio.sleep(1)
+    session = None
     try:
         sessionstring = await db.get_session(lazyid)
         apiid = await db.get_api(lazyid)
@@ -294,9 +305,9 @@ async def generate_session(bot, msg):
     finally:
         await success.delete()
         # Ensure the session is stopped and cleaned up
-        if session:
+        if session is not None:
             # await session.stop()
-            # await session.disconnect()
+            await session.disconnect()
             del lazydeveloperrsession[lazyid]  # Clean up the session from the global dictionary
             print(f"Session stopped and cleaned up for user {user_id} ✅")
         await init.edit_text("with ❤ <a href='https://t.me/Simplifytuber2'>Yash-Goyal</a>", parse_mode=enums.ParseMode.HTML)

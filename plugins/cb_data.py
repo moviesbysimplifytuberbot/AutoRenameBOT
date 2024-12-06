@@ -1,5 +1,5 @@
 from helpo.utils import progress_for_pyrogram, convert
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ForceReply
 from hachoir.metadata import extractMetadata
 from hachoir.parser import createParser
@@ -11,9 +11,10 @@ import time
 from config import *
 from plugins.lazydeveloper import lazydeveloperrsession
 import asyncio
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+
 lazy_bot = lazydeveloperrsession
-
-
 
 
 from asyncio import Lock, Queue, create_task
@@ -81,7 +82,6 @@ async def lazydevelopertaskmanager(bot, update):
                 create_task(process_task(bot, user_id, task_data))  # Start task in background
     except Exception as e:
         print(f"Error in lazydevelopertaskmanager: {e}")
-
 
 async def process_task(bot, user_id, task_data):
     try:
@@ -279,15 +279,29 @@ async def process_task(bot, user_id, task_data):
                 #
                 try:
                     print("-----🍟. LazyDeveloperr .🍟-----")
-                    if update.from_user.id not in lazy_bot:
+                    sessionstring = await db.get_session(user_id)
+                    apiid = await db.get_api(user_id)
+                    apihash = await db.get_hash(user_id)
+                    # Check if any value is missing
+                    if not sessionstring or not apiid or not apihash:
+                        missing_values = []
+                        if not sessionstring:
+                            missing_values.append("session string")
+                        if not apiid:
+                            missing_values.append("API ID")
+                        if not apihash:
+                            missing_values.append("API hash")
+                        
+                        missing_fields = ", ".join(missing_values)
                         await bot.send_message(
-                        chat_id=update.chat.id,
-                        text="Failed to copy file from target chat.\n\n ❌ Session not found. Please generate a session first using /generate. \n\n Contact developer if you are facing this issue again again...."
+                            chat_id=msg.chat.id,
+                            text=f"⛔ Missing required information:<b> {missing_fields}. </b>\n\nPlease ensure you have set up all the required details in the database.",
+                            parse_mode=enums.ParseMode.HTML
                         )
-                        return
+                        return  # Exit the function if values are missing
                     
-                    run_lazybot = lazy_bot[update.from_user.id]
-                    
+                    run_lazybot = TelegramClient(StringSession(sessionstring), apiid, apihash)
+                    await run_lazybot.start()
                     print("🔥 user bot initiated 🚀 ")
                 except Exception as e:
                     print(e)
@@ -336,6 +350,11 @@ async def process_task(bot, user_id, task_data):
                 # 
                 # (C) LazyDeveloperr ❤
                 print(f"❤ New file forwarded to bot after renaming 🍟")
+                await run_lazybot.disconnect()
+                if not run_lazybot.is_connected():
+                    print("Session is disconnected successfully!")
+                else:
+                    print("Session is still connected.")
                 print("-----🍟. LazyDeveloperr .🍟----- ")
 
                 # (C) LazyDeveloperr ❤
@@ -350,6 +369,7 @@ async def process_task(bot, user_id, task_data):
             os.remove(file_path)
             if ph_path:
                 os.remove(ph_path)
+
     except Exception as lazydeveloperr:
         print(lazydeveloperr)
     finally:

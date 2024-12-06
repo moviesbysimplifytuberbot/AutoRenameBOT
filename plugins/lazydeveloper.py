@@ -70,6 +70,9 @@ async def connect_session(bot, msg):
     #     return bot.send_message(chat_id=msg.chat.id, text=f"You are already logged in ✅.\n\nUse /rename and enjoy renaming 👍")
     
     # get users session string
+    init = await msg.reply(
+        "Starting session connection process..."
+    )
     session_msg = await bot.ask(
         user_id, "ᴘʟᴇᴀsᴇ sᴇɴᴅ ʏᴏᴜʀ `TELETHON SESSION STRING`", filters=filters.text
     )
@@ -111,12 +114,11 @@ async def connect_session(bot, msg):
     session = None
     try:
 
-        # lazydeveloperrsession[user_id] = TelegramClient(StringSession(lazydeveloper_string_session), api_id, api_hash)
-        # session = await lazydeveloperrsession[user_id].start()
-        zbot = Client("lazyrename", session_string=String_Session, api_id=api_id, api_hash=api_hash)
-        zbot.start()
+        lazydeveloperrsession = TelegramClient(StringSession(lazydeveloper_string_session), api_id, api_hash)
+        await lazydeveloperrsession.start()
+
         # for any query msg me on telegram - @LazyDeveloperr 👍
-        if zbot:
+        if lazydeveloperrsession.is_connected():
             await db.set_session(user_id, lazydeveloper_string_session)
             await db.set_api(user_id, api_id)
             await db.set_hash(user_id, api_hash)
@@ -126,21 +128,18 @@ async def connect_session(bot, msg):
             )
             print(f"Session started successfully for user {user_id} ✅")
         else:
-            raise RuntimeError("Session could not be started.")
+            raise RuntimeError("Session could not be started. Please re-check your provided credentials. 👍")
     except Exception as e:
         print(f"Error starting session for user {user_id}: {e}")
         await msg.reply("Failed to start session. Please re-check your provided credentials. 👍")
     finally:
         await success.delete()
-
-        # Ensure the session is stopped and cleaned up
-        print(f"⚡ Session status => {session}")
-        if session is not None :
-            await session.stop()
-            # await session.disconnect()
-            del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
-            print(f"Session stopped and cleaned up for user {user_id} ✅")
-        print(f"✅ Session status => {session}")
+        await lazydeveloperrsession.disconnect()
+        if not lazydeveloperrsession.is_connected():
+            print("Session is disconnected successfully!")
+        else:
+            print("Session is still connected.")
+        await init.edit_text("with ❤ @Simplifytuber2", parse_mode=enums.ParseMode.HTML)
         return
 
 
@@ -291,10 +290,12 @@ async def generate_session(bot, msg):
         sessionstring = await db.get_session(lazyid)
         apiid = await db.get_api(lazyid)
         apihash = await db.get_hash(lazyid)
+
         lazydeveloperrsession= TelegramClient(StringSession(sessionstring), apiid, apihash)
         await lazydeveloperrsession.start()
+
         # for any query msg me on telegram - @LazyDeveloperr 👍
-        if lazydeveloperrsession:
+        if lazydeveloperrsession.is_connected():
             await bot.send_message(
                 chat_id=msg.chat.id,
                 text="Session started successfully! ✅ Use /rename to proceed and enjoy renaming journey 👍."
@@ -312,7 +313,7 @@ async def generate_session(bot, msg):
             print("Session is disconnected successfully!")
         else:
             print("Session is still connected.")
-        await init.edit_text("with ❤ <a href='https://t.me/Simplifytuber2'>Yash-Goyal</a>", parse_mode=enums.ParseMode.HTML, diasble_web_page_preview=True)
+        await init.edit_text("with ❤ @Simplifytuber2", parse_mode=enums.ParseMode.HTML)
         return
 
 

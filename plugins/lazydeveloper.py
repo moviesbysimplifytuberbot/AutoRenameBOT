@@ -408,8 +408,8 @@ async def rename(client, message):
         )
         return  # Exit the function if values are missing
     
-    lazydeveloperrsession[user_id] = TelegramClient(StringSession(sessionstring), apiid, apihash)
-    lazy_userbot = await lazydeveloperrsession[user_id].start()
+    lazy_userbot = TelegramClient(StringSession(sessionstring), apiid, apihash)
+    await lazy_userbot.start()
     
     # Iterating through messages
     max_limit = 100  # High limit to fetch more messages if some are skipped
@@ -458,8 +458,12 @@ async def rename(client, message):
         await message.reply("❌ Failed to process messages.")
     #finally disconnect the session to avoid broken pipe error 
     await lazy_userbot.disconnect()
-    del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
-    print(f"Session stopped and cleaned up for user {user_id} ✅")
+
+    if not lazy_userbot.is_connected():
+        print("Session is disconnected successfully!")
+    else:
+        print("Session is still connected.")
+
 
 
 async def verify_user(user_id: int):

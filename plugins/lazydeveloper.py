@@ -345,11 +345,11 @@ async def cancelled(msg):
 async def rename(client, message):
     user_id = message.from_user.id
     # Check if the user is allowed to use the bot
-    if not await verify_user(user_id):
-        return await message.reply("⛔ You are not authorized to use this bot.")
+    # if not await verify_user(user_id):
+    #     return await message.reply("⛔ You are not authorized to use this bot.")
     
-    if user_id not in lazydeveloperrsession:
-        return await message.reply("⚠️ No session found. Please generate a session first using /generate.")
+    # if user_id not in lazydeveloperrsession:
+    #     return await message.reply("⚠️ No session found. Please generate a session first using /generate.")
 
     # if not lazydeveloperrsession:
     #     print(f"lazydeveloperrsession not found")
@@ -385,8 +385,32 @@ async def rename(client, message):
     # Using `ubot` to iterate through chat history in target chat
     # file_count = 0
 
-    lazy_userbot = lazydeveloperrsession[user_id]
-
+    # lazy_userbot = lazydeveloperrsession[user_id]
+    
+    sessionstring = await db.get_session(user_id)
+    apiid = await db.get_api(user_id)
+    apihash = await db.get_hash(user_id)
+    # Check if any value is missing
+    if not sessionstring or not apiid or not apihash:
+        missing_values = []
+        if not sessionstring:
+            missing_values.append("session string")
+        if not apiid:
+            missing_values.append("API ID")
+        if not apihash:
+            missing_values.append("API hash")
+        
+        missing_fields = ", ".join(missing_values)
+        await client.send_message(
+            chat_id=msg.chat.id,
+            text=f"⛔ Missing required information:<b> {missing_fields}. </b>\n\nPlease ensure you have set up all the required details in the database.",
+            parse_mode=enums.ParseMode.HTML
+        )
+        return  # Exit the function if values are missing
+    
+    lazydeveloperrsession[user_id] = TelegramClient(StringSession(sessionstring), apiid, apihash)
+    lazy_userbot = await lazydeveloperrsession[user_id].start()
+    
     # Iterating through messages
     max_limit = 100  # High limit to fetch more messages if some are skipped
     forwarded_lazy_count = 0
@@ -432,6 +456,10 @@ async def rename(client, message):
     except Exception as e:
         print(f"Error occurred: {e}")
         await message.reply("❌ Failed to process messages.")
+    #finally disconnect the session to avoid broken pipe error 
+    await lazy_userbot.disconnect()
+    del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
+    print(f"Session stopped and cleaned up for user {user_id} ✅")
 
 
 async def verify_user(user_id: int):

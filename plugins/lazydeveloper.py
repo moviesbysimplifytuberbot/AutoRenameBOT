@@ -1,5 +1,5 @@
 import asyncio
-from pyrogram import filters, Client
+from pyrogram import filters, Client, enums
 from config import *
 from helpo.database import db 
 from asyncio.exceptions import TimeoutError
@@ -62,8 +62,12 @@ lazydeveloperrsession = {}
 @Client.on_message(filters.private & filters.command("connect"))
 async def connect_session(bot, msg):
     user_id = msg.from_user.id
-    if user_id in lazydeveloperrsession:
-        return bot.send_message(chat_id=msg.chat.id, text=f"You are already logged in ✅.\n\nUse /rename and enjoy renaming 👍")
+    
+    # if not await verify_user(user_id):
+    #     return await msg.reply("⛔ You are not authorized to use this bot.")
+    
+    # if user_id in lazydeveloperrsession:
+    #     return bot.send_message(chat_id=msg.chat.id, text=f"You are already logged in ✅.\n\nUse /rename and enjoy renaming 👍")
     
     # get users session string
     session_msg = await bot.ask(
@@ -122,12 +126,12 @@ async def connect_session(bot, msg):
     except Exception as e:
         print(f"Error starting session for user {user_id}: {e}")
         await msg.reply("Failed to start session. Please re-check your provided credentials. 👍")
-        return
     finally:
         await success.delete()
         # Ensure the session is stopped and cleaned up
         if session:
-            await lazydeveloperrsession[user_id].stop()
+            await session.stop()
+            # await session.disconnect()
             del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
             print(f"Session stopped and cleaned up for user {user_id} ✅")
         return
@@ -136,14 +140,13 @@ async def connect_session(bot, msg):
 @Client.on_message(filters.private & filters.command("generate"))
 async def generate_session(bot, msg):
     lazyid = msg.from_user.id
-    global lazydeveloperrsession
-    if not await verify_user(lazyid):
-        return await msg.reply("⛔ You are not authorized to use this bot.")
+    # if not await verify_user(lazyid):
+    #     return await msg.reply("⛔ You are not authorized to use this bot.")
     
-    if lazyid in lazydeveloperrsession:
-        return await msg.reply("Hello sweetheart!\nYour session is already in use. Type /rename and enjoy renaming. \n❤")
+    # if lazyid in lazydeveloperrsession:
+    #     return await msg.reply("Hello sweetheart!\nYour session is already in use. Type /rename and enjoy renaming. \n❤")
 
-    await msg.reply(
+    init = await msg.reply(
         "sᴛᴀʀᴛɪɴG [ᴛᴇʟᴇᴛʜᴏɴ] sᴇssɪᴏɴ ɢᴇɴᴇʀᴀᴛɪᴏɴ..."
     )
     user_id = msg.chat.id
@@ -254,17 +257,12 @@ async def generate_session(bot, msg):
             return
 
     string_session = client.session.save()
-    try:
-        # St_Session[msg.from_user.id] = string_session
-        set_session_in_config(msg.from_user.id, string_session)
-        set_api_id_in_config(msg.from_user.id, api_id)
-        set_api_hash_in_config(msg.from_user.id, api_hash)
-        print(f"Credentials api id and hash saved to config successfully ✅")
-    except Exception as LazyDeveloperr:
-        print(LazyDeveloperr)
 
+    await db.set_session(lazyid, string_session)
+    await db.set_api(lazyid, api_id)
+    await db.set_hash(lazyid, api_hash)
+    
     text = f"**ᴛᴇʟᴇᴛʜᴏɴ sᴛʀɪɴɢ sᴇssɪᴏɴ** \n\n||`{string_session}`||"
-       
     try:
         await client.send_message("me", text)
     except KeyError:
@@ -276,18 +274,32 @@ async def generate_session(bot, msg):
     # Save session to the dictionary
     await asyncio.sleep(1)
     try:
-        lazydeveloperrsession[lazyid] = TelegramClient(StringSession(string_session), api_id, api_hash)
-        await lazydeveloperrsession[lazyid].start()
-        print(f"Session started successfully for user {user_id} ✅")
-        await success.delete()
-        await asyncio.sleep(1)
-        await bot.send_message(
-        chat_id=msg.chat.id,
-        text="Logged in Successfully ✅. \n\nType /rename and enjoy renaming renaming journey 👍"
-    )
+        sessionstring = await db.get_session(lazyid)
+        apiid = await db.get_api(lazyid)
+        apihash = await db.get_hash(lazyid)
+        lazydeveloperrsession[lazyid] = TelegramClient(StringSession(sessionstring), apiid, apihash)
+        session = await lazydeveloperrsession[lazyid].start()
+        # for any query msg me on telegram - @LazyDeveloperr 👍
+        if session:
+            await bot.send_message(
+                chat_id=msg.chat.id,
+                text="Session started successfully! ✅ Use /rename to proceed and enjoy renaming journey 👍."
+            )
+            print(f"Session started successfully for user {user_id} ✅")
+        else:
+            raise RuntimeError("Session could not be started.")
     except Exception as e:
         print(f"Error starting session for user {user_id}: {e}")
         await msg.reply("Failed to start session. Please try again.")
+    finally:
+        await success.delete()
+        # Ensure the session is stopped and cleaned up
+        if session:
+            # await session.stop()
+            # await session.disconnect()
+            del lazydeveloperrsession[lazyid]  # Clean up the session from the global dictionary
+            print(f"Session stopped and cleaned up for user {user_id} ✅")
+        await init.edit_text("with ❤ <a href='https://t.me/Simplifytuber2'>Yash-Goyal</a>", parse_mode=enums.ParseMode.HTML)
         return
 
 

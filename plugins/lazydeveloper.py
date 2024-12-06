@@ -134,8 +134,8 @@ async def connect_session(bot, msg):
         # Ensure the session is stopped and cleaned up
         print(f"⚡ Session status => {session}")
         if session is not None :
-            # await session.stop()
-            await session.disconnect()
+            await session.stop()
+            # await session.disconnect()
             del lazydeveloperrsession[user_id]  # Clean up the session from the global dictionary
             print(f"Session stopped and cleaned up for user {user_id} ✅")
         print(f"✅ Session status => {session}")

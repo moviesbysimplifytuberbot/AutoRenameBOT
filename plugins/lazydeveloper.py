@@ -111,10 +111,12 @@ async def connect_session(bot, msg):
     session = None
     try:
 
-        lazydeveloperrsession[user_id] = TelegramClient(StringSession(lazydeveloper_string_session), api_id, api_hash)
-        session = await lazydeveloperrsession[user_id].start()
+        # lazydeveloperrsession[user_id] = TelegramClient(StringSession(lazydeveloper_string_session), api_id, api_hash)
+        # session = await lazydeveloperrsession[user_id].start()
+        zbot = Client("lazyrename", session_string=String_Session, api_id=api_id, api_hash=api_hash)
+        zbot.start()
         # for any query msg me on telegram - @LazyDeveloperr 👍
-        if session:
+        if zbot:
             await db.set_session(user_id, lazydeveloper_string_session)
             await db.set_api(user_id, api_id)
             await db.set_hash(user_id, api_hash)
@@ -284,15 +286,15 @@ async def generate_session(bot, msg):
     )
     # Save session to the dictionary
     await asyncio.sleep(1)
-    session = None
+    # session = None
     try:
         sessionstring = await db.get_session(lazyid)
         apiid = await db.get_api(lazyid)
         apihash = await db.get_hash(lazyid)
-        lazydeveloperrsession[lazyid] = TelegramClient(StringSession(sessionstring), apiid, apihash)
-        session = await lazydeveloperrsession[lazyid].start()
+        lazydeveloperrsession= TelegramClient(StringSession(sessionstring), apiid, apihash)
+        await lazydeveloperrsession.start()
         # for any query msg me on telegram - @LazyDeveloperr 👍
-        if session:
+        if lazydeveloperrsession:
             await bot.send_message(
                 chat_id=msg.chat.id,
                 text="Session started successfully! ✅ Use /rename to proceed and enjoy renaming journey 👍."
@@ -305,15 +307,12 @@ async def generate_session(bot, msg):
         await msg.reply("Failed to start session. Please try again.")
     finally:
         await success.delete()
-        # Ensure the session is stopped and cleaned up
-        print(f"⚡ Session => {session}")
-        if session is not None:
-            # await session.stop()
-            await session.disconnect()
-            del lazydeveloperrsession[lazyid]  # Clean up the session from the global dictionary
-            print(f"Session stopped and cleaned up for user {user_id} ✅")
+        await lazydeveloperrsession.disconnect()
+        if not lazydeveloperrsession.is_connected():
+            print("Session is disconnected successfully!")
+        else:
+            print("Session is still connected.")
         await init.edit_text("with ❤ <a href='https://t.me/Simplifytuber2'>Yash-Goyal</a>", parse_mode=enums.ParseMode.HTML, diasble_web_page_preview=True)
-        print(f"✅ Session status => {session}")
         return
 
 

@@ -9,13 +9,9 @@ import humanize
 from PIL import Image
 import time
 from config import *
-from plugins.lazydeveloper import lazydeveloperrsession
 import asyncio
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-
-lazy_bot = lazydeveloperrsession
-
 
 from asyncio import Lock, Queue, create_task
 user_tasks = {}
@@ -265,7 +261,7 @@ async def process_task(bot, user_id, task_data):
                 os.remove(file_path)
                 if ph_path:
                     os.remove(ph_path)
-                return
+                # return
             
             # Delete the original file message in the bot's PM => @LazyDeveloperr
             # Delete the original file message in the bot's PM => @LazyDeveloperr
@@ -378,6 +374,5 @@ async def process_task(bot, user_id, task_data):
             user_tasks[user_id]["active"] -= 1
             if not user_tasks[user_id]["queue"].empty():
                 next_task = await user_tasks[user_id]["queue"].get()
+                user_tasks[user_id]["active"] += 1
                 create_task(process_task(bot, user_id, next_task))  # Start next task in background
-        
-    
